@@ -1,7 +1,38 @@
+const bcrypt = require("bcrypt");
+
+const jwt = require("jsonwebtoken");
+
+const createToken = (user, secret, expiresIn) => {
+  const { username, email } = user;
+  return jwt.sign({ username, email }, secret, { expiresIn });
+};
+
 module.exports = {
     Query: {
 
-      getUser: () => null,
+      getCurrentUser: async (_, args, { User, currentUser }) => {
+
+        console.log(_, args, User, currentUser)
+
+        if (!currentUser) {
+          return null;
+        }
+        const user = await User.findOne({
+          username: currentUser.username
+        }).populate({
+          path: "favorites",
+          model: "Post"
+        });
+        return user;
+      },
+
+      getPost: async (_, {postId}, {Post}) => {
+        const post = await Post.findOne({_id: postId}).populate({
+          path: "messages.messageUser",
+          model: "User"
+        });
+        return post;
+      },
 
       getPosts: async (_, args, { Post }) => {
         const posts = await Post.find({})
@@ -42,7 +73,19 @@ module.exports = {
 
     },
     Mutation: {
-      
+
+      signinUser: async (_, { username, password }, { User }) => {
+        const user = await User.findOne({ username });
+        if (!user) {
+          throw new Error("User not found");
+        }
+        const isValidPassword = await bcrypt.compare(password, user.password);
+        if (!isValidPassword) {
+          throw new Error("Invalid password");
+        }
+        return { token: createToken(user, process.env.SECRET, "1hr") };
+      },
+
       signupUser: async (_, { username, email, password }, { User }) => {
         const user = await User.findOne({ username });
         if (user) {
@@ -53,7 +96,7 @@ module.exports = {
           email,
           password
         }).save();
-        return newUser;
+        return { token: createToken(newUser, process.env.SECRET, "1hr") };
       },
       
       addPost: async (

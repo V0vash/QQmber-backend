@@ -32,14 +32,21 @@ type Message {
   messageUser: User!
 }
 
+type Token {
+  token: String!
+}
+
 type Query {
   getUser: User
+  getCurrentUser: User
+  getPost(postId: ID!): Post!
   getPosts: [Post]
   infiniteScrollPosts(pageNum: Int!, pageSize: Int!): PostsPage
 }
 
 type Mutation {
-  signupUser(username: String!, email: String!, password: String!): User!
+  signupUser(username: String!, email: String!, password: String!): Token
+  signinUser(username: String!, password: String!): Token
   addPost(
     title: String!
     imageUrl: String!
